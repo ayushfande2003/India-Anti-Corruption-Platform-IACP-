@@ -1,0 +1,122 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  CITIZEN
+  VOLUNTEER
+  LAWYER
+  ADMIN
+}
+
+enum Severity {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum Status {
+  PENDING
+  APPROVED
+  REJECTED
+  RESOLVED
+}
+
+enum EvidenceType {
+  IMAGE
+  VIDEO
+  DOCUMENT
+}
+
+model User {
+  id              String   @id @default(uuid())
+  name            String
+  email           String   @unique
+  passwordHash    String
+  role            Role     @default(CITIZEN)
+  trustedContacts Json?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  reports         Report[]
+}
+
+model Report {
+  id             String     @id @default(uuid())
+  userId         String?
+  user           User?      @relation(fields: [userId], references: [id])
+  category       String
+  description    String
+  dateTime       DateTime
+  latitude       Decimal    @db.Decimal(9, 6)
+  longitude      Decimal    @db.Decimal(9, 6)
+  severity       Severity   @default(MEDIUM)
+  status         Status     @default(PENDING)
+  city           String?
+  ward           String?
+  office         String?
+  duplicateOfId  String?
+  duplicateOf    Report?    @relation("DuplicateOf", fields: [duplicateOfId], references: [id])
+  duplicates     Report[]   @relation("DuplicateOf")
+  ocrText        String?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  evidence       Evidence[]
+
+  @@index([city])
+  @@index([latitude, longitude])
+}
+
+model Evidence {
+  id         String       @id @default(uuid())
+  reportId   String
+  report     Report       @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  fileUrl    String
+  fileType   EvidenceType
+  phash      String?
+  ocrText    String?
+  uploadedAt DateTime     @default(now())
+}
+
+model LegalHelper {
+  id            String   @id @default(uuid())
+  name          String
+  city          String
+  contactInfo   String
+  specialization String?
+}
+
+model Tender {
+  id             String    @id @default(uuid())
+  department     String
+  title          String
+  amount         Decimal   @db.Decimal(18, 2)
+  startDate      DateTime?
+  endDate        DateTime?
+  contractorName String?
+  status         String?
+  createdAt      DateTime  @default(now())
+}
+
+model NewsCache {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  url         String   @unique
+  source      String?
+  publishedAt DateTime
+  createdAt   DateTime @default(now())
+}
+
+model Event {
+  id          String   @id @default(uuid())
+  title       String
+  date        DateTime
+  location    String?
+  description String?
+  createdAt   DateTime @default(now())
+}
